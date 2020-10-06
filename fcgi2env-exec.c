@@ -108,36 +108,40 @@
 #define PROGRAM (argv[1])
 
 #define SELF  (0)
-#define child_stdin  pipe_one[0]
-#define to_child     pipe_one[1]
-#define from_child   pipe_two[0]
-#define child_stdout pipe_two[1]
+#define child_stdin  pipe_to_child[0]
+#define to_child     pipe_to_child[1]
+#define from_child   pipe_to_parent[0]
+#define child_stdout pipe_to_parent[1]
 
 
-#define UNASSIGNED_ID -1
 
-// requestID < 256
+
 
 
 int main(int argc, char * argv[], char **envp) {
-  int retval;
-
-  int role;
-  int request_id;
-
-
-  int child_pid = -1;
   
-  int pipe_one[2];  // child(0) <-- parent 
-  int pipe_two[2];  // parent <-- child(1) 
+  int retval; // A generic variable used to obtain the return value of system routines
 
-  BYTE * child_env[MAX_ENV_COUNT];
+  int request_id;  // The Request ID for the associated FCGI request
 
-
-  
+  //  Some buffers to process the FCGI request
   FCGI_Header * buffer_header;
   BYTE * buffer_content;   int content_length=0; 
   BYTE * buffer_padding;   int padding_length=0;
+
+
+  // A child CGI process is created to execute the target program */
+  // This child process is
+  //     created via a fork
+  //     execle with an environment
+  //     communicates with the parent via two pipes
+  int child_pid = -1;
+  
+  BYTE * child_env[MAX_ENV_COUNT];
+
+  int pipe_to_child[2];  // child(0) <-- parent 
+  int pipe_to_parent[2];  // parent <-- child(1) 
+
 
   // Create buffer space to read the FCGI_Header, the Content, and the Padding.
   buffer_header  = (FCGI_Header *) malloc(sizeof(FCGI_Header));
@@ -146,6 +150,12 @@ int main(int argc, char * argv[], char **envp) {
   memset(buffer_padding, ZERO, FCGI_MAX_PADDING_LEN);
 
 
+  // Create the pipes for communcation with the child.
+  pipe(pipe_to_child);
+  pipe(pipe_to_parent);
+  
+
+  
   /*******************************************************************************/
   /* Program Flow                                                                */
   /*    - Receive: {FCGI_BEGIN_REQUEST, id, {FCGI_RESPONDER, flags} }            */
@@ -166,6 +176,7 @@ int main(int argc, char * argv[], char **envp) {
   /*                                                                             */
   /*******************************************************************************/
 
+
   
   /*******************************************************************************/
   /*    - Receive: {FCGI_BEGIN_REQUEST, id, {RESPONDER, flags} }                 */
@@ -174,26 +185,31 @@ int main(int argc, char * argv[], char **envp) {
 
     retval = read(STDIN_FILENO, (BYTE *) buffer_header, sizeof(FCGI_Header));
     {
-      /* Validate the contents */
+      // Validate the Request Header
       exit_error(buffer_header->version != FCGI_VERSION_1, RETVAL_PROTOCOL_ERROR);
       exit_error(buffer_header->type != FCGI_BEGIN_REQUEST, RETVAL_PROTOCOL_ERROR);
       
       request_id = (buffer_header->requestIdB1 <<8 ) | buffer_header->requestIdB0;
-      
+
       exit_error(buffer_header->contentLengthB0 != sizeof(FCGI_BeginRequestBody), RETVAL_PROTOCOL_ERROR);
       
     }
     {
-      /* Read the Request Body */
+      // Read the Request Body */
       FCGI_BeginRequestBody * request_body;
+      int role;
       
       retval = read(STDIN_FILENO, (BYTE *) request_body, sizeof(FCGI_BeginRequestBody) );
       role = (request_body->roleB1 <<8 ) | request_body->roleB0;
+
+      exit_error(retval != sizeof(FCGI_BeginRequestBody), RETVAL_READ_WRITE_ERR);
       exit_error(role != FCGI_RESPONDER, RETVAL_PROTOCOL_ERROR);
       exit_error(ZERO != request_body->flags, RETVAL_PROTOCOL_ERROR);
     }
   }
 
+
+  
   /*******************************************************************************/
   /*    - Receive: {FCGI_PARAMS, id, <string> }+                                 */
   /*    - Build:   Create the environment for the child process                  */
@@ -306,6 +322,9 @@ int main(int argc, char * argv[], char **envp) {
       /* A record of the form {PARAMS, id, ""} denotes end of PARAMS */
     } while (content_length != 0);
     child_env[env_count] = NULL;
+    child_env[env_count+1] = (BYTE *) 0xDEADBEAF;    // To help with debugging
+    
+    assert(env_count < MAX_ENV_COUNT);
   }
 
 
@@ -332,45 +351,43 @@ int main(int argc, char * argv[], char **envp) {
   /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
   /*    - Send: <string> + to child process                                      */
   /*******************************************************************************/    
-  // Per the spec, there should be at least one FCGI_STDIN record
-  // It appears, however, that you will have zero, or 2 or more.
+  {
+    do  {
 
-  
-  do  {
-    retval = read(STDIN_FILENO, (BYTE *) buffer_header, 1 );
-
-    if (retval == 0 ) {
-      // For some reason the final record:  {FCGI_STDIN, id, ""} is not being provided
-      // This approach allows said record to be optional 
-      ;
-    } else {
+      // Read the rest of the FCGI_Header
       {
-	// Read the rest of the FCGI_Header
-	retval = read(STDIN_FILENO, (BYTE *) buffer_header + 1, sizeof(FCGI_Header) - 1 );
-
+	retval = read(STDIN_FILENO, (BYTE *) buffer_header, sizeof(FCGI_Header) );
+	
 	/* Validate the contents */
 	exit_error(buffer_header->version != FCGI_VERSION_1, RETVAL_PROTOCOL_ERROR);
 	exit_error(buffer_header->type    != FCGI_STDIN,     RETVAL_PROTOCOL_ERROR);
-      
+	
 	exit_error(request_id != ((buffer_header->requestIdB1 << 8 ) | buffer_header->requestIdB0), RETVAL_ID_MISMATCH);
-      
+	
 	content_length = buffer_header -> contentLengthB1 << 8 | buffer_header -> contentLengthB0;
 	padding_length = buffer_header -> paddingLength;
-      
+	
       }
+
+      // Read the content and send it to the child
       if (content_length != 0 ) {
 	retval = read(STDIN_FILENO, (BYTE *) buffer_content, content_length);
 	retval = write(to_child, (BYTE *) buffer_content, content_length);
       }
 
+      // Read the padding
       if (padding_length != 0 ) {
 	retval = read(STDIN_FILENO, (BYTE *) buffer_content, padding_length);
       }
-    }
-    /* A record of the form {FCGI_STDIN, id, ""} denotes end of 'stdin' */
-  } while (content_length != 0 );  
-  close(to_child);
+      
+      /* A record of the form {FCGI_STDIN, id, ""} denotes end of 'stdin' */
+    } while (content_length != 0 );  
+    close(to_child);
+  }
 
+
+  // Enhancement: Allow for a request_ID > 255
+  exit_error(request_id < 256, RETVAL_OTHER);
 
   /*******************************************************************************/    
   /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
