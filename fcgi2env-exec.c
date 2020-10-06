@@ -294,9 +294,9 @@ int main(int argc, char * argv[], char **envp) {
 	    child_env[env_count] = (BYTE *) malloc(name_length + 1 + value_length + 1);
 	    q = child_env[env_count];
 	
-	    memmove( (char *) name, q, name_length); q += name_length;
+	    memmove( q, (char *) name, name_length); q += name_length;
 	    (*q) = '=' ; q++;
-	    memmove( (char *) value, q, value_length); q += value_length;
+	    memmove( q, (char *) value, value_length); q += value_length;
 	    (*q) = '\0'; q++;
 	  }
 
