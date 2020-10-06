@@ -150,7 +150,7 @@ int main(int argc, char * argv[], char **envp) {
   buffer_header  = (FCGI_Header *) malloc(sizeof(FCGI_Header));
   buffer_content = (BYTE *) malloc(FCGI_MAX_CONTENT_LEN);
   buffer_padding = (BYTE *) malloc(FCGI_MAX_PADDING_LEN);
-  memset(buffer_padding, (int) NULL, FCGI_MAX_PADDING_LEN);
+  memset(buffer_padding, ZERO, FCGI_MAX_PADDING_LEN);
 
 
   /***********************************************************************/
@@ -375,12 +375,12 @@ int main(int argc, char * argv[], char **envp) {
     /* Prepare the FCGI header */
     buffer_header->version = FCGI_VERSION_1;
     buffer_header->type = FCGI_STDOUT;
-    buffer_header->requestIdB1 = (BYTE) NULL;
+    buffer_header->requestIdB1 = ZERO;
     buffer_header->requestIdB0 = request_id;
-    buffer_header->contentLengthB1 = (BYTE) NULL;
-    buffer_header->contentLengthB0 = (BYTE) NULL;   
-    buffer_header->paddingLength = (BYTE) NULL;
-    buffer_header->reserved = (BYTE) NULL;
+    buffer_header->contentLengthB1 = ZERO;
+    buffer_header->contentLengthB0 = ZERO;   
+    buffer_header->paddingLength = ZERO;
+    buffer_header->reserved = ZERO;
 
     /* Copy Child's STDOUT to FCGI_STDOUT */
     do  {
