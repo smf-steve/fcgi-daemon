@@ -387,7 +387,7 @@ int main(int argc, char * argv[], char **envp) {
 
 
   // Enhancement: Allow for a request_ID > 255
-  exit_error(request_id < 256, RETVAL_OTHER);
+  exit_error(request_id >= 256, RETVAL_OTHER);
 
   /*******************************************************************************/    
   /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
