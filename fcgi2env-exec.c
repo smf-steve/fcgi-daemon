@@ -410,8 +410,8 @@ int main(int argc, char * argv[], char **envp) {
 
       padding_length = 0;        // Enhancement:  Calculate an appropriate padding_length
       
-      buffer_header->contentLengthB1 = (unsigned char) (content_length & xFF ) >> 8;
-      buffer_header->contentLengthB0 = (unsigned char) (content_length & xFF00) ;
+      buffer_header->contentLengthB1 = (unsigned char) (content_length & 0x00FF ) >> 8;
+      buffer_header->contentLengthB0 = (unsigned char) (content_length & 0xFF00) ;
 
       buffer_header->paddingLength   = padding_length;
 
