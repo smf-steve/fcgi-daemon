@@ -7,45 +7,38 @@
 /*     - sends back to the result to the client.                               */
 /*                                                                             */
 /*******************************************************************************/
-/* FCGI Protocol Definition: fcgi-spec.html                                  */
-/*                                                                           */
-/* This is a limited implementation of the FCGI protocol.                    */
-/* The purpose of this implementation is for comparison to SCGI.             */
-/* As such, only the components that are related to this comparison          */
-/* have been implemented.                                                    */
-/*                                                                           */
-/* Specfically,                                                              */
-/*    - Management record types are not supported                            */
-/*    - Appplication records limited to the following:                       */
-/*        o BEGIN_REQUEST, END_REQUEST                                       */
-/*        o PARAMS                                                           */
-/*        o STDIN, STDOUT                                                    */
-/*        o Note Implemented:                                                */
-/*            - STDERR, DATA, ABORT_REQUEST                                  */
-/*    - END_REQUEST limited to REQUEST_COMPLETE                              */
-/*    - RESPONDER is the only role                                           */
-/*    - AUTHORIZER * FILTER roles NOT supported                              */
-/*    - Strick adheres to the general communicatio flow                      */
-/*    - CANT_MPX_CONN is presumed                                            */
-/*        o i.e., the connection "id" is not validated                       */
-/*                                                                           */
-/* Communication Flow                                                        */
-/*    - Received: {BEGIN_REQUEST, id, {RESPONDER, flags} }                   */
-/*    - Received: {PARAMS, id, <string> }+                                   */
-/*    - Received: {STDIN, id, <string> }+                                    */
-/*                                                                           */
-/*    - Send:     {STDOUT, id, <string> }+                                   */
-/*    - Send:     {END_REQUEST, 1, {status, REQUEST_COMPLETE}                */
-/*                                                                           */
-/* Many of the declarations in this implementation have been taken from the  */
-/*     FastCGI Specification, Mark R. Brown (see "fcgi-spec.html")           */
-/*                                                                           */
-/* We have tried to stay consist with the abstract C declaration and the     */
-/* overall layout of the specification, whenever poossible. As the spec.     */
-/* can be used as additional documentation for this implementation.          */
-/* and then adapted for our implementation.                                  */
-/*                                                                           */
-/*****************************************************************************/
+/* FCGI Protocol Definition: fcgi-spec.html                                    */
+/*                                                                             */
+/* This is a limited implementation of the FCGI protocol.                      */
+/* The purpose of this implementation is for comparison to SCGI.               */
+/* As such, only the components that are related to this comparison            */
+/* have been implemented.                                                      */
+/*                                                                             */
+/* Specifically,                                                               */
+/*    - Management record types are not supported                              */
+/*    - Appplication records limited to the following:                         */
+/*        o FCGI_BEGIN_REQUEST, FCGI_END_REQUEST                               */
+/*        o FCGI_PARAMS                                                        */
+/*        o FCGI_STDIN, FCGI_STDOUT                                            */
+/*        o Note Implemented:                                                  */
+/*            - STDERR, DATA, ABORT_REQUEST                                    */
+/*    - END_REQUEST limited to REQUEST_COMPLETE                                */
+/*    - RESPONDER is the only role                                             */
+/*    - AUTHORIZER * FILTER roles NOT supported                                */
+/*    - Strick adheres to the general communication flow                       */
+/*    - CANT_MPX_CONN is presumed                                              */
+/*        o i.e., the connection "id" is not validated                         */
+/*                                                                             */
+/*                                                                             */
+/* Many of the declarations in this implementation have been taken from the    */
+/*     FastCGI Specification, Mark R. Brown (see "fcgi-spec.html")             */
+/*                                                                             */
+/* We have tried to stay consist with the abstract C declaration and the       */
+/* overall layout of the specification, whenever poossible. As the spec.       */
+/* can be used as additional documentation for this implementation.            */
+/* and then adapted for our implementation.                                    */
+/*                                                                             */
+/*******************************************************************************/
 
 // Contraints that have not been implemented.
 
@@ -153,30 +146,30 @@ int main(int argc, char * argv[], char **envp) {
   memset(buffer_padding, ZERO, FCGI_MAX_PADDING_LEN);
 
 
-  /***********************************************************************/
-  /* Program Flow                                                        */
-  /*    - Receive: {BEGIN_REQUEST, id, {RESPONDER, flags} }              */
-  /*                                                                     */
-  /*    - Receive: {PARAMS, id, <string> }+                              */
-  /*    - Build:   Create the environment for the child process          */
-  /*                                                                     */
-  /*    - Fork:    Create a child process to execute the CGI program     */
-  /*                                                                     */
-  /*    - Receive: {STDIN, id, <string> }+                               */
-  /*    - Send:    <string>+ to child process                            */
-  /*                                                                     */
-  /*    - Receive: STDOUT from child process                             */
-  /*    - Send:    {STDOUT, id, <string> }+                              */
-  /*                                                                     */
-  /*    - Wait:    Block until the child process returns                 */
-  /*    - Send:    {END_REQUEST, 1, {status, REQUEST_COMPLETE}           */
-  /*                                                                     */
-  /***********************************************************************/
+  /*******************************************************************************/
+  /* Program Flow                                                                */
+  /*    - Receive: {FCGI_BEGIN_REQUEST, id, {FCGI_RESPONDER, flags} }            */
+  /*                                                                             */
+  /*    - Receive: {FCGI_PARAMS, id, <string> }+                                 */
+  /*    - Build:   Create the environment for the child process                  */
+  /*                                                                             */
+  /*    - Fork:    Create a child process to execute the CGI program             */
+  /*                                                                             */
+  /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
+  /*    - Send:    <string>+ to child process                                    */
+  /*                                                                             */
+  /*    - Receive: STDOUT from child process                                     */
+  /*    - Send:    {FCGI_STDOUT, id, <string> }+                                 */
+  /*                                                                             */
+  /*    - Wait:    Block until the child process returns                         */
+  /*    - Send:    {FCGI_END_REQUEST, 1, {status, FCGI_REQUEST_COMPLETE}         */
+  /*                                                                             */
+  /*******************************************************************************/
 
   
-  /***********************************************************************/
-  /*    - Receive: {BEGIN_REQUEST, id, {RESPONDER, flags} }              */
-  /***********************************************************************/
+  /*******************************************************************************/
+  /*    - Receive: {FCGI_BEGIN_REQUEST, id, {RESPONDER, flags} }                 */
+  /*******************************************************************************/
   {  
 
     retval = read(STDIN_FILENO, (BYTE *) buffer_header, sizeof(FCGI_Header));
@@ -201,11 +194,10 @@ int main(int argc, char * argv[], char **envp) {
     }
   }
 
-  
-  /***********************************************************************/
-  /*    - Receive: {PARAMS, id, <string> }+                              */
-  /*    - Build:   Create the environment for the child process          */
-  /***********************************************************************/
+  /*******************************************************************************/
+  /*    - Receive: {FCGI_PARAMS, id, <string> }+                                 */
+  /*    - Build:   Create the environment for the child process                  */
+  /*******************************************************************************/
   {
     int env_count = 0;
 
@@ -312,14 +304,15 @@ int main(int argc, char * argv[], char **envp) {
       }
       
       /* A record of the form {PARAMS, id, ""} denotes end of PARAMS */
-    } while (content_length != 0);  
+    } while (content_length != 0);
+    child_env[env_count] = NULL;
   }
 
 
 
-  /***********************************************************************/
-  /*    - Fork: a child process to execute the CGI program               */
-  /***********************************************************************/
+  /*******************************************************************************/
+  /*    - Fork: a child process to execute the CGI program                       */
+  /*******************************************************************************/
   {
     child_pid = fork();
     if (child_pid == SELF ) {
@@ -335,42 +328,54 @@ int main(int argc, char * argv[], char **envp) {
   }
 
 
-    
-  /***********************************************************************/
-  /*    - Receive: {STDIN, id, <string> }+                               */
-  /*    - Send: <string> + to child process                              */
-  /***********************************************************************/
-  do  {
-    retval = read(STDIN_FILENO, (BYTE *) buffer_header, sizeof(FCGI_Header) );
-    {
-      /* Validate the contents */
-      exit_error(buffer_header->version != FCGI_VERSION_1, RETVAL_PROTOCOL_ERROR);
-      exit_error(buffer_header->type    != FCGI_STDIN,     RETVAL_PROTOCOL_ERROR);
-      
-      exit_error(request_id != ((buffer_header->requestIdB1 << 8 ) | buffer_header->requestIdB0), RETVAL_ID_MISMATCH);
-      
-      content_length = buffer_header -> contentLengthB1 << 8 | buffer_header -> contentLengthB0;
-      padding_length = buffer_header -> paddingLength;
-      
-    }
-    if (content_length != 0 ) {
-      retval = read(STDIN_FILENO, (BYTE *) buffer_content, content_length);
-      retval = write(to_child, (BYTE *) buffer_content, content_length);
-    }
+  /*******************************************************************************/    
+  /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
+  /*    - Send: <string> + to child process                                      */
+  /*******************************************************************************/    
+  // Per the spec, there should be at least one FCGI_STDIN record
+  // It appears, however, that you will have zero, or 2 or more.
 
-    if (padding_length != 0 ) {
-      retval = read(STDIN_FILENO, (BYTE *) buffer_content, padding_length);
+  
+  do  {
+    retval = read(STDIN_FILENO, (BYTE *) buffer_header, 1 );
+
+    if (retval == 0 ) {
+      // For some reason the final record:  {FCGI_STDIN, id, ""} is not being provided
+      // This approach allows said record to be optional 
+      ;
+    } else {
+      {
+	// Read the rest of the FCGI_Header
+	retval = read(STDIN_FILENO, (BYTE *) buffer_header + 1, sizeof(FCGI_Header) - 1 );
+
+	/* Validate the contents */
+	exit_error(buffer_header->version != FCGI_VERSION_1, RETVAL_PROTOCOL_ERROR);
+	exit_error(buffer_header->type    != FCGI_STDIN,     RETVAL_PROTOCOL_ERROR);
+      
+	exit_error(request_id != ((buffer_header->requestIdB1 << 8 ) | buffer_header->requestIdB0), RETVAL_ID_MISMATCH);
+      
+	content_length = buffer_header -> contentLengthB1 << 8 | buffer_header -> contentLengthB0;
+	padding_length = buffer_header -> paddingLength;
+      
+      }
+      if (content_length != 0 ) {
+	retval = read(STDIN_FILENO, (BYTE *) buffer_content, content_length);
+	retval = write(to_child, (BYTE *) buffer_content, content_length);
+      }
+
+      if (padding_length != 0 ) {
+	retval = read(STDIN_FILENO, (BYTE *) buffer_content, padding_length);
+      }
     }
-    /* A record of the form {STDIN, id, ""} denotes end of 'stdin' */
+    /* A record of the form {FCGI_STDIN, id, ""} denotes end of 'stdin' */
   } while (content_length != 0 );  
   close(to_child);
 
 
-  
-  /***********************************************************************/	
-  /*    - Receive: {STDIN, id, <string> }+                               */
-  /*    - Send:    <string>+ to child process                            */
-  /***********************************************************************/	
+  /*******************************************************************************/    
+  /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
+  /*    - Send:    <string>+ to child process                                    */
+  /*******************************************************************************/    
   {
     /* Prepare the FCGI header */
     buffer_header->version = FCGI_VERSION_1;
@@ -413,11 +418,11 @@ int main(int argc, char * argv[], char **envp) {
 		     
 
 
- 
-  /***********************************************************************/	
-  /*    - Wait:    Block until the child process returns                 */
-  /*    - Send:    {END_REQUEST, 1, {status, REQUEST_COMPLETE}           */
-  /***********************************************************************/	
+
+  /*******************************************************************************/    
+  /*    - Wait:    Block until the child process returns                         */
+  /*    - Send:    {FCGI_END_REQUEST, 1, {status, REQUEST_COMPLETE}              */
+  /*******************************************************************************/    
   {
     int status = 0;
 
