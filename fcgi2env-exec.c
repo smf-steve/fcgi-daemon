@@ -102,7 +102,7 @@
 #define ZERO (0)
 #define NONZERO (!0)
 
-#define MAX_STDOUT_BUFFER    (1024 - 1 )
+#define MAX_STDOUT_BUFFER    (0xFFFF)
 
 #define MAX_ENV_COUNT 100
 #define PROGRAM (argv[1])
@@ -408,15 +408,12 @@ int main(int argc, char * argv[], char **envp) {
     do  {
       content_length = read(from_child, (BYTE *) buffer_content, MAX_STDOUT_BUFFER );
 
-      // Enhancement:  Calculate an appropriate padding_length
-      padding_length = 0;
+      padding_length = 0;        // Enhancement:  Calculate an appropriate padding_length
       
-      buffer_header->contentLengthB0 = (unsigned char) content_length;
-      buffer_header->paddingLength   = padding_length;
+      buffer_header->contentLengthB1 = (unsigned char) (content_length & xFF ) >> 8;
+      buffer_header->contentLengthB0 = (unsigned char) (content_length & xFF00) ;
 
-      // Enhancement:  We previously set the MAX_STDOUT_BUFFER to be 255
-      //               If change larger then contentLengthB1 must be used.
-      assert(buffer_header->contentLengthB0 == content_length);
+      buffer_header->paddingLength   = padding_length;
 
       
       retval  = write(STDOUT_FILENO, (BYTE *) buffer_header, sizeof(FCGI_Header));
