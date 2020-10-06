@@ -406,7 +406,7 @@ int main(int argc, char * argv[], char **envp) {
 
     /* Copy Child's STDOUT to FCGI_STDOUT */
     do  {
-      content_length = read(from_child, (BYTE *) buffer_content, sizeof(MAX_STDOUT_BUFFER) );
+      content_length = read(from_child, (BYTE *) buffer_content, MAX_STDOUT_BUFFER );
 
       // Enhancement:  We previously set the MAX_STDOUT_BUFFER to be less 256
       //               If change larger then contentLengthB1 must be used.
