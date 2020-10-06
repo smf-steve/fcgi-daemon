@@ -235,7 +235,7 @@ int main(int argc, char * argv[], char **envp) {
 
 
 	// read the contentData
-	retval = read(STDIN_FILENO, (BYTE *) buffer_content, sizeof(content_length));
+	retval = read(STDIN_FILENO, (BYTE *) buffer_content, content_length);
 	exit_error(retval != content_length, RETVAL_READ_WRITE_ERR);
 
 	p = buffer_content;
@@ -307,7 +307,7 @@ int main(int argc, char * argv[], char **envp) {
       }
 
       if (padding_length != 0 ) {
-	retval = read(STDIN_FILENO, (BYTE *) buffer_content, sizeof(padding_length));
+	retval = read(STDIN_FILENO, (BYTE *) buffer_content, padding_length);
 	exit_error(retval != content_length, RETVAL_READ_WRITE_ERR);
       }
       
@@ -354,12 +354,12 @@ int main(int argc, char * argv[], char **envp) {
       
     }
     if (content_length != 0 ) {
-      retval = read(STDIN_FILENO, (BYTE *) buffer_content, sizeof(content_length));
-      retval = write(to_child, (BYTE *) buffer_content, sizeof(content_length));
+      retval = read(STDIN_FILENO, (BYTE *) buffer_content, content_length);
+      retval = write(to_child, (BYTE *) buffer_content, content_length);
     }
 
     if (padding_length != 0 ) {
-      retval = read(STDIN_FILENO, (BYTE *) buffer_content, sizeof(padding_length));
+      retval = read(STDIN_FILENO, (BYTE *) buffer_content, padding_length);
     }
     /* A record of the form {STDIN, id, ""} denotes end of 'stdin' */
   } while (content_length != 0 );  
