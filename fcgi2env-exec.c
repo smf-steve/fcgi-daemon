@@ -390,9 +390,9 @@ int main(int argc, char * argv[], char **envp) {
   exit_error(request_id >= 256, RETVAL_OTHER);
 
   /*******************************************************************************/    
-  /*    - Receive: {FCGI_STDIN, id, <string> }+                                  */
-  /*    - Send:    <string>+ to child process                                    */
-  /*******************************************************************************/    
+  /*    - Receive: STDOUT from child process                                     */
+  /*    - Send:    {FCGI_STDOUT, id, <string> }+                                 */
+  /*******************************************************************************/
   {
     /* Prepare the FCGI header */
     buffer_header->version = FCGI_VERSION_1;
@@ -408,16 +408,17 @@ int main(int argc, char * argv[], char **envp) {
     do  {
       content_length = read(from_child, (BYTE *) buffer_content, MAX_STDOUT_BUFFER );
 
-      // Enhancement:  We previously set the MAX_STDOUT_BUFFER to be less 256
-      //               If change larger then contentLengthB1 must be used.
-      assert( buffer_header->contentLengthB0 == content_length );
-
       // Enhancement:  Calculate an appropriate padding_length
       padding_length = 0;
       
       buffer_header->contentLengthB0 = (unsigned char) content_length;
       buffer_header->paddingLength   = padding_length;
 
+      // Enhancement:  We previously set the MAX_STDOUT_BUFFER to be 255
+      //               If change larger then contentLengthB1 must be used.
+      assert(buffer_header->contentLengthB0 == content_length);
+
+      
       retval  = write(STDOUT_FILENO, (BYTE *) buffer_header, sizeof(FCGI_Header));
       if (content_length != 0) {
 	retval += write(STDOUT_FILENO, (BYTE *) buffer_content, content_length);
