@@ -1,0 +1,78 @@
+To produce a test that has FCGI_STDIN
+
+
+# on client run:
+# curl --data "This is a string to be processed by the FCGI_INPUT " https://www.sandbox.csun.edu/~steve/fcgi-bin/emit-env
+
+# on server  ProxyPass "/~steve/fcgi-bin/emit-env" "fcgi://localhost:5000/"
+
+# socket -s 5000 > fcgi_stdin.request
+
+--
+
+fcgi2env-exec echo-request.cgi < fcgi_stdin.request > output
+
+-------
+
+To produce a test that has no FCGI_STDIN
+
+
+# on client:
+curl https://www.sandbox.csun.edu/~steve/cgi-bin/emit-env
+
+# on server        ProxyPass "/~steve/fcgi-bin/emit-env" "fcgi://localhost:5000/"
+
+socker -s 5000 > fcgi-simple.request
+
+fcg2env-exec emit-cgi-env.cgi < fcgi-simple.request >
+
+
+
+
+##  Language notication
+
+{FCGI_BEGIN_REQUEST, 1, {FCGI_RESPONDER, flags} }
+{FCGI_PARAMS, 1, <string> }+
+{FCGI_PARAMS, 1, "" }
+                                      
+{FCGI_STDIN, 1, "" }
+{FCGI_STDIN, 1, "" }
+
+{FCGI_STDOUT, 1, "" }
+{FCGI_END_REQUEST, 1, {status, FCGI_REQUEST_COMPLETE}
+
+
+
+
+---
+client:		submits a proper HTTP request
+http2protocol (gateway):  receives HTTP requests and translates it into the appropriate protocol: procotols include http, fcgi, scgi, and cgi
+
+launcher:   daemon or xinetd, by hand
+manager:    	on-demand, or pool 
+marshal-In:	responible for read input and preparing it for the 
+marshal-Out:
+CGI provider:	service provider:  generates the dynamic content requested by the client
+
+
+
+php-fpm:
+   - http2procol:  webserver
+
+
+   - launcher:  by hand.   Admin starts up the service and the is
+   - manager:   setups telephone line
+     		preforks a number of workers
+   - workers:
+        loop n:  accept, marshing in, generates, masharall out, n--
+   - generates: via interpreting the script
+
+
+tranditional CGI
+
+    - launcher - the web server...
+    - manager - setups telephone line
+
+1'st listener,  xinet, daemon
+
+accept
