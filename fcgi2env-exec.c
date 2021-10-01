@@ -172,7 +172,7 @@ int main(int argc, char * argv[], char **envp) {
   /*    - Send:    {FCGI_STDOUT, id, <string> }+                                 */
   /*                                                                             */
   /*    - Wait:    Block until the child process returns                         */
-  /*    - Send:    {FCGI_END_REQUEST, 1, {status, FCGI_REQUEST_COMPLETE}         */
+  /*    - Send:    {FCGI_END_REQUEST, id, {status, FCGI_REQUEST_COMPLETE}         */
   /*                                                                             */
   /*******************************************************************************/
 
@@ -370,6 +370,7 @@ int main(int argc, char * argv[], char **envp) {
       }
 
       // Read the content and send it to the child
+      // Enhancement:  The child, if it ignores stdin, might have exited, hence the to_child is closed, which will cause a EPIPE
       if (content_length != 0 ) {
 	retval = read(STDIN_FILENO, (BYTE *) buffer_content, content_length);
 	retval = write(to_child, (BYTE *) buffer_content, content_length);
@@ -436,7 +437,7 @@ int main(int argc, char * argv[], char **envp) {
 
   /*******************************************************************************/    
   /*    - Wait:    Block until the child process returns                         */
-  /*    - Send:    {FCGI_END_REQUEST, 1, {status, REQUEST_COMPLETE}              */
+  /*    - Send:    {FCGI_END_REQUEST, id, {status, REQUEST_COMPLETE}              */
   /*******************************************************************************/    
   {
     int status = 0;
